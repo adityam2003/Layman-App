@@ -12,7 +12,15 @@ struct ArticleRowView: View {
     var body: some View {
         HStack(spacing: 16) {
             // Left Thumbnail
-            if let urlString = article.imageUrl, let url = URL(string: urlString) {
+            if let data = article.localImageData, let uiImage = UIImage(data: data) {
+                // Instantly load from local offline cache
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 80, height: 80)
+                    .cornerRadius(18)
+                    .clipped()
+            } else if let urlString = article.imageUrl, let url = URL(string: urlString) {
                 AsyncImage(url: url) { phase in
                     if let image = phase.image {
                         image

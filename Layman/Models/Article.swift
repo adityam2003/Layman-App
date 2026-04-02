@@ -22,6 +22,11 @@ struct Article: Codable, Identifiable, Hashable {
     let sourceId: String?
     let sourceName: String?
     
+    // Offline / Cached Data
+    var aiHeadline: String?
+    var aiCards: [String]?
+    var localImageData: Data? // Excluded from CodingKeys to avoid Supabase bloat
+    
     // Conformance to Identifiable uses the article_id mapping
     enum CodingKeys: String, CodingKey {
         case id = "article_id"
@@ -33,6 +38,8 @@ struct Article: Codable, Identifiable, Hashable {
         case imageUrl = "image_url"
         case sourceId = "source_id"
         case sourceName = "source_name"
+        case aiHeadline = "ai_headline"
+        case aiCards = "ai_cards"
     }
     
     /// Derived property ensuring the title fits within the 52 char maximum

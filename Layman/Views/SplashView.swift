@@ -12,23 +12,31 @@ import SwiftUI
 struct SplashView: View {
     var body: some View {
         ZStack {
-            // Theme Background matches WelcomeView
+            // Warm, peachy gradient matching the user's provided design exactly
             LinearGradient(
                 stops: [
-                    .init(color: Color(hex: "E8BCAA"), location: 0.0),
-                    .init(color: Color(hex: "FFF4ED"), location: 0.4),
-                    .init(color: Color(hex: "F2D2BE"), location: 1.0)
+                    .init(color: Color(hex: "F2D7C6"), location: 0.0),
+                    .init(color: Color(hex: "FFFDFB"), location: 0.8)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
             
-            // Match the storyboard: centered bold title
-            Text("Layman")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .foregroundStyle(Color(UIColor.label))
+            // ── Double Layered Logo Text ───────────────────
+            ZStack {
+                // Secondary "Shadow" text layer
+                Text("Layman")
+                    .font(.system(size: 42, weight: .bold))
+                    .foregroundColor(Color.gray.opacity(0.15))
+                    .offset(x: -3, y: -3) // Reduced offset for smoother look
+                
+                // Primary Logo text layer
+                Text("Layman")
+                    .font(.system(size: 42, weight: .bold))
+                    .foregroundColor(Color(UIColor.label))
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         }
     }
 }

@@ -8,6 +8,7 @@ import SwiftUI
 struct ArticleDetailView: View {
     @State private var viewModel: ArticleDetailViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     
     // Tracks the current page in the layman content translation carousel
     @State private var currentCardIndex: Int = 0
@@ -48,17 +49,24 @@ struct ArticleDetailView: View {
                         }
                         
                         Button {
-                            print("Bookmark tapped")
+                            viewModel.toggleBookmark(context: modelContext)
                         } label: {
-                            Image(systemName: "bookmark")
+                            Image(systemName: viewModel.isBookmarked ? "bookmark.fill" : "bookmark")
                                 .font(.system(size: 18, weight: .semibold))
+                                // Highlight icon if bookmarked
+                                .foregroundColor(viewModel.isBookmarked ? Color(hex: "D86D3F") : Color.gray)
                         }
+                        .disabled(viewModel.isChangingBookmark)
                         
-                        Button {
-                            print("Share tapped")
-                        } label: {
+                        if let articleURL = URL(string: viewModel.article.link) {
+                            ShareLink(item: articleURL, subject: Text(viewModel.article.title), message: Text("Check out this article I found on Layman!")) {
+                                Image(systemName: "square.and.arrow.up")
+                                    .font(.system(size: 18, weight: .semibold))
+                            }
+                        } else {
                             Image(systemName: "square.and.arrow.up")
                                 .font(.system(size: 18, weight: .semibold))
+                                .opacity(0.5)
                         }
                     }
                     .foregroundColor(Color.gray) // Neutral icon styling reflecting mockup
@@ -81,7 +89,17 @@ struct ArticleDetailView: View {
                             .shimmer(isActive: viewModel.isTranslating)
                         
                         // Hero Feature Image
-                        if let urlString = viewModel.article.imageUrl, let url = URL(string: urlString) {
+                        if let data = viewModel.article.localImageData, let uiImage = UIImage(data: data) {
+                            // Offline Instant Load
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: UIScreen.main.bounds.width - 32, height: 230)
+                                .cornerRadius(24) 
+                                .clipped()
+                                .padding(.horizontal)
+                        } else if let urlString = viewModel.article.imageUrl, let url = URL(string: urlString) {
+                            // Online Fallback
                             AsyncImage(url: url) { phase in
                                 if let image = phase.image {
                                     image
@@ -194,6 +212,10 @@ struct ArticleDetailView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.hidden)
                 .presentationCornerRadius(28)
+        }
+        .task {
+            // Check offline SwiftData context to set bookmark state instantly
+            viewModel.checkBookmarkState(context: modelContext)
         }
     }
 }

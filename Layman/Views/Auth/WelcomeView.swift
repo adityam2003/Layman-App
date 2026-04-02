@@ -10,13 +10,11 @@ struct WelcomeView: View {
     
     var body: some View {
         ZStack {
-            // Background Gradient exactly matching the mockup:
-            // Top-left is a deeper warm peach, center is bright cream, bottom is soft peach.
+            // Warm, peachy gradient matching the refined design
             LinearGradient(
                 stops: [
-                    .init(color: Color(hex: "E8BCAA"), location: 0.0),
-                    .init(color: Color(hex: "FFF4ED"), location: 0.4),
-                    .init(color: Color(hex: "F2D2BE"), location: 1.0)
+                    .init(color: Color(hex: "F2D7C6"), location: 0.0),
+                    .init(color: Color(hex: "FFFDFB"), location: 0.8)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -24,12 +22,18 @@ struct WelcomeView: View {
             .ignoresSafeArea()
             
             VStack {
-                // Top Logo
-                Text("Layman")
-                    .font(.system(size: 32, weight: .bold, design: .default))
-                    // .tracking(-0.5) // Optional: tighter kerning for logo feel
-                    .foregroundStyle(Color(UIColor.label))
-                    .padding(.top, 60)
+                // Top Logo - Double Layered for consistent branding
+                ZStack {
+                    Text("Layman")
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundColor(Color.gray.opacity(0.15))
+                        .offset(x: -2, y: -2)
+                    
+                    Text("Layman")
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundColor(Color(UIColor.label))
+                }
+                .padding(.top, 60)
                 
                 Spacer()
                 

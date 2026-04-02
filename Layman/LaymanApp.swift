@@ -8,6 +8,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct LaymanApp: App {
@@ -32,6 +33,7 @@ struct LaymanApp: App {
                 }
             }
             .animation(.easeInOut(duration: 0.3), value: authViewModel.isSessionChecked)
+            .modelContainer(for: LocalSavedArticle.self)
         }
     }
 }

@@ -5,6 +5,8 @@
 
 import Foundation
 
+import SwiftData
+
 @Observable
 class ArticleDetailViewModel {
     let article: Article
@@ -14,6 +16,10 @@ class ArticleDetailViewModel {
     var simplifiedHeadline: String
     var translatedChunks: [String] = []
     var isTranslating: Bool = true
+    
+    // Bookmark State
+    var isBookmarked: Bool = false
+    var isChangingBookmark: Bool = false
     
     // In-memory cache for the current session
     private static var sessionCache: [String: (headline: String, cards: [String])] = [:]
@@ -26,10 +32,93 @@ class ArticleDetailViewModel {
         loadAITranslation()
     }
     
+    func checkBookmarkState(context: ModelContext) {
+        let articleId = article.id
+        // Check local DB first for instant offline reading
+        let descriptor = FetchDescriptor<LocalSavedArticle>(predicate: #Predicate { $0.id == articleId })
+        if let existing = try? context.fetch(descriptor), !existing.isEmpty {
+            self.isBookmarked = true
+            return
+        }
+        self.isBookmarked = false
+    }
+    
+    func toggleBookmark(context: ModelContext) {
+        guard !isChangingBookmark else { return }
+        isChangingBookmark = true
+        
+        let articleId = article.id
+        let newState = !isBookmarked
+        
+        // Optimistic UI update
+        self.isBookmarked = newState
+        
+        // 1. Instantly update local SwiftData (Offline support)
+        if newState {
+            // Capture current AI compilation
+            var articleToSave = self.article
+            if !self.isTranslating {
+                articleToSave.aiHeadline = self.simplifiedHeadline
+                articleToSave.aiCards = self.translatedChunks
+            }
+            
+            let localArticle = LocalSavedArticle(article: articleToSave)
+            context.insert(localArticle)
+            
+            // Fire off background image byte download
+            if let urlString = article.imageUrl, let url = URL(string: urlString) {
+                Task {
+                    if let data = try? Data(contentsOf: url) {
+                        await MainActor.run {
+                            localArticle.thumbnailData = data
+                            try? context.save()
+                        }
+                    }
+                }
+            }
+        } else {
+            let descriptor = FetchDescriptor<LocalSavedArticle>(predicate: #Predicate { $0.id == articleId })
+            if let existing = try? context.fetch(descriptor) {
+                for item in existing {
+                    context.delete(item)
+                }
+            }
+        }
+        
+        // Ensure local changes save
+        try? context.save()
+        
+        // 2. Sync to Supabase in the background
+        Task {
+            do {
+                if newState {
+                    try await SavedArticleService.shared.saveArticle(article)
+                } else {
+                    try await SavedArticleService.shared.removeArticle(articleId: article.id)
+                }
+            } catch {
+                print("Failed to sync bookmark with cloud: \(error)")
+                // Note: We don't revert the local UI here. The user clicked save, they want it saved locally at least. 
+                // A robust app would queue this retry.
+            }
+            await MainActor.run {
+                self.isChangingBookmark = false
+            }
+        }
+    }
+    
     private func loadAITranslation() {
         let articleId = article.id
         
-        // 1. Check Cache
+        // 0. Check Offline Data (loaded from Saved/SwiftData)
+        if let offlineCards = article.aiCards, let offlineHeadline = article.aiHeadline, !offlineCards.isEmpty {
+            self.simplifiedHeadline = offlineHeadline
+            self.translatedChunks = offlineCards
+            self.isTranslating = false
+            return
+        }
+        
+        // 1. Check Memory Cache
         if let cached = Self.sessionCache[articleId] {
             self.simplifiedHeadline = cached.headline
             self.translatedChunks = cached.cards

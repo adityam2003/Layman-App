@@ -25,12 +25,29 @@ final class AuthViewModel {
     /// `true` once the initial session check on app launch has completed.
     var isSessionChecked = false
     
+    /// The currently logged in user metadata.
+    var currentUser: User? = nil
+    
     /// `true` while an auth request is in-flight (disables buttons, shows spinners).
     var isLoading = false
     
     /// Non-nil when the last auth operation produced an error.
     /// Cleared at the start of the next attempt.
     var errorMessage: String?
+    
+    /// Convenience accessors for basic user info
+    var userEmail: String {
+        currentUser?.email ?? "Not logged in"
+    }
+    
+    var userName: String {
+        // Look for display name in metadata, fallback to email prefix
+        if let metadata = currentUser?.userMetadata,
+           let name = metadata["full_name"] as? String {
+            return name
+        }
+        return userEmail.components(separatedBy: "@").first?.capitalized ?? "Layman User"
+    }
     
     // MARK: - Private
     
@@ -59,10 +76,12 @@ final class AuthViewModel {
                 // returns the cached session even if it's expired.
                 // We must check ourselves.
                 if !session.isExpired {
+                    self.currentUser = session.user
                     self.isAuthenticated = true
                 }
             } catch {
                 // No stored session — user needs to sign in.
+                self.currentUser = nil
                 self.isAuthenticated = false
             }
         }
@@ -84,10 +103,11 @@ final class AuthViewModel {
         }
         
         do {
-            try await supabase.auth.signIn(
+            let session = try await supabase.auth.signIn(
                 email: email,
                 password: password
             )
+            self.currentUser = session.user
             isAuthenticated = true
         } catch {
             errorMessage = error.localizedDescription
@@ -123,7 +143,8 @@ final class AuthViewModel {
             )
             
             // If the project requires email confirmation, `session` is nil.
-            if response.session != nil {
+            if let session = response.session {
+                self.currentUser = session.user
                 isAuthenticated = true
             } else {
                 errorMessage = "Check your email to confirm your account."
@@ -142,6 +163,7 @@ final class AuthViewModel {
         
         do {
             try await supabase.auth.signOut()
+            self.currentUser = nil
             isAuthenticated = false
         } catch {
             errorMessage = error.localizedDescription

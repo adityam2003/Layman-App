@@ -7,39 +7,80 @@ import SwiftUI
 
 struct HomeView: View {
     @State private var viewModel = HomeViewModel()
+    @State private var searchText: String = ""
+    @State private var isSearchBarVisible: Bool = false
     
-    // Serve placeholders when loading, actual real data when finished
-    private var currentFeatured: [Article] {
-        return viewModel.hasFetched ? viewModel.featuredArticles : [Article.placeholder]
+    // Filtered lists based on search
+    private var filteredFeatured: [Article] {
+        let featured = viewModel.hasFetched ? viewModel.featuredArticles : [Article.placeholder]
+        if searchText.isEmpty { return featured }
+        return featured.filter { $0.title.localizedCaseInsensitiveContains(searchText) || ($0.description?.localizedCaseInsensitiveContains(searchText) ?? false) }
     }
     
-    private var currentPicks: [Article] {
-        return viewModel.hasFetched ? viewModel.todaysPicks : (0..<3).map { _ in Article.placeholder }
+    private var filteredPicks: [Article] {
+        let picks = viewModel.hasFetched ? viewModel.todaysPicks : (0..<3).map { _ in Article.placeholder }
+        if searchText.isEmpty { return picks }
+        return picks.filter { $0.title.localizedCaseInsensitiveContains(searchText) || ($0.description?.localizedCaseInsensitiveContains(searchText) ?? false) }
     }
     
     var body: some View {
         VStack(spacing: 20) {
             
             // ── Header (Logo & Search) ──────────────
-            HStack {
-                Text("Layman")
-                    .font(.system(size: 32, weight: .bold))
-                    .foregroundStyle(Color(UIColor.label))
-                
-                Spacer()
-                
-                Button {
-                    // Search Action (stubbed)
-                } label: {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 16, weight: .bold))
-                        .padding(12)
+            VStack(spacing: 12) {
+                HStack {
+                    if !isSearchBarVisible {
+                        Text("Layman")
+                            .font(.system(size: 32, weight: .bold))
+                            .foregroundStyle(Color(UIColor.label))
+                            .transition(.move(edge: .leading).combined(with: .opacity))
+                    }
+                    
+                    Spacer()
+                    
+                    if isSearchBarVisible {
+                        HStack {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundColor(.gray)
+                            
+                            TextField("Search articles...", text: $searchText)
+                                .textFieldStyle(.plain)
+                                .autocorrectionDisabled()
+                            
+                            Button {
+                                withAnimation(.spring()) {
+                                    searchText = ""
+                                    isSearchBarVisible = false
+                                }
+                            } label: {
+                                Text("Cancel")
+                                    .fontWeight(.medium)
+                                    .foregroundColor(Color(hex: "D86D3F"))
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
                         .background(Color(hex: "F4EAE2"))
-                        .clipShape(Circle())
-                        .foregroundStyle(Color(UIColor.label))
+                        .cornerRadius(20)
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                    } else {
+                        Button {
+                            withAnimation(.spring()) {
+                                isSearchBarVisible = true
+                            }
+                        } label: {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 16, weight: .bold))
+                                .padding(12)
+                                .background(Color(hex: "F4EAE2"))
+                                .clipShape(Circle())
+                                .foregroundStyle(Color(UIColor.label))
+                        }
+                    }
                 }
             }
             .padding(.horizontal)
+            .padding(.top, 16)
             
             // ── Dynamic Content ──────────────────────
             if let error = viewModel.errorMessage {
@@ -71,38 +112,40 @@ struct HomeView: View {
                 // ── SINGLE UI LAYOUT (No Jumps) ───────────
                 
                 // Carousel Section
-                if !currentFeatured.isEmpty {
-                    FeaturedCarouselView(articles: currentFeatured)
+                if !filteredFeatured.isEmpty {
+                    FeaturedCarouselView(articles: filteredFeatured)
                         .redacted(reason: viewModel.hasFetched ? [] : .placeholder)
                 }
                 
                 // Today's Picks Section
-                if !currentPicks.isEmpty {
+                if !filteredPicks.isEmpty {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack(alignment: .bottom) {
-                            Text("Today's Picks")
+                            Text(searchText.isEmpty ? "Today's Picks" : "Search Results")
                                 .font(.title3)
                                 .fontWeight(.bold)
                                 .foregroundStyle(Color(UIColor.label))
                             
                             Spacer()
                             
-                            NavigationLink {
-                                AllArticlesView(articles: viewModel.todaysPicks)
-                            } label: {
-                                Text("View All")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundStyle(Color(hex: "D86D3F"))
-                                    .opacity(viewModel.hasFetched ? 1.0 : 0.0) // Hide when loading
+                            if searchText.isEmpty {
+                                NavigationLink {
+                                    AllArticlesView(articles: viewModel.todaysPicks)
+                                } label: {
+                                    Text("View All")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundStyle(Color(hex: "D86D3F"))
+                                        .opacity(viewModel.hasFetched ? 1.0 : 0.0) // Hide when loading
+                                }
+                                .disabled(!viewModel.hasFetched)
                             }
-                            .disabled(!viewModel.hasFetched)
                         }
                         .padding(.horizontal)
                         
                         ScrollView(showsIndicators: false) {
                             LazyVStack(spacing: 16) {
-                                ForEach(currentPicks) { article in
+                                ForEach(filteredPicks) { article in
                                     if viewModel.hasFetched {
                                         NavigationLink(destination: ArticleDetailView(article: article)) {
                                             ArticleRowView(article: article)
@@ -119,6 +162,20 @@ struct HomeView: View {
                         }
                         .redacted(reason: viewModel.hasFetched ? [] : .placeholder)
                     }
+                } else if !searchText.isEmpty {
+                    // Search Empty State
+                    Spacer()
+                    VStack(spacing: 12) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 48))
+                            .foregroundColor(Color(hex: "D86D3F").opacity(0.5))
+                        Text("No results for \"\(searchText)\"")
+                            .font(.headline)
+                        Text("Try searching for a different topic.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
                 }
             }
         }

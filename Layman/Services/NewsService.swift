@@ -14,8 +14,10 @@ enum NetworkError: Error {
 actor NewsService {
     static let shared = NewsService()
     
-    // Given dynamically by the user
-    private let apiKey = "pub_542133497cd349d5b9740ad13787fb2a"
+    // Key is read from Secrets.xcconfig via Info.plist
+    private var apiKey: String {
+        Bundle.main.infoDictionary?["NEWS_API_KEY"] as? String ?? ""
+    }
     
     func fetchTopArticles() async throws -> [Article] {
         // We use technology & business categories to match the "Tech & Startups" theme

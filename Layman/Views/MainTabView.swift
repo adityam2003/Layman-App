@@ -29,13 +29,10 @@ struct MainTabView: View {
             
             // ── Saved Tab ─────────────────────────
             NavigationStack {
-                VStack {
-                    Text("Saved")
-                        .font(.title2.bold())
-                    Text("Your saved items will appear here.")
-                        .foregroundStyle(.secondary)
-                }
-                .navigationTitle("Saved")
+                SavedView()
+                    .navigationTitle("")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbarBackground(.hidden, for: .navigationBar)
             }
             .tabItem {
                 Label("Saved", systemImage: "bookmark.fill")
@@ -43,47 +40,14 @@ struct MainTabView: View {
             
             // ── Profile Tab ───────────────────────
             NavigationStack {
-                VStack(spacing: 24) {
-                    Text("Profile")
-                        .font(.title2.bold())
-                    Text("Manage your account settings.")
-                        .foregroundStyle(.secondary)
-                    
-                    // Sign Out button for testing auth flow.
-                    Button(role: .destructive) {
-                        Task {
-                            await viewModel.signOut()
-                        }
-                    } label: {
-                        HStack {
-                            Image(systemName: "rectangle.portrait.and.arrow.right")
-                            Text("Sign Out")
-                        }
-                        .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color(.secondarySystemBackground))
-                        .cornerRadius(12)
-                    }
-                    .padding(.horizontal)
-                    
-                    // Show loading state during sign-out.
-                    if viewModel.isLoading {
-                        ProgressView()
-                    }
-                    
-                    // Show error if sign-out fails.
-                    if let error = viewModel.errorMessage {
-                        Text(error)
-                            .font(.footnote)
-                            .foregroundStyle(.red)
-                    }
-                }
-                .navigationTitle("Profile")
+                ProfileView(authViewModel: viewModel)
+                    .navigationTitle("Profile")
+                    .navigationBarTitleDisplayMode(.inline)
             }
             .tabItem {
                 Label("Profile", systemImage: "person.fill")
             }
         }
+        .tint(Color(hex: "D86D3F")) // Changes active tab icon color to brand brown
     }
 }
