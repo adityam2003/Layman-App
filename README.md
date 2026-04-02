@@ -68,9 +68,9 @@ Layman is a premium iOS news aggregator designed to strip away the jargon. Power
    Press `Cmd + R` to start the app!
 
 ## 📸 Screen Previews
-| Home Feed | AI Detail | Saved Offline |
+| Home Feed | AI Detail | Article Content |
 | :---: | :---: | :---: |
-| ![Home](https://via.placeholder.com/200x400) | ![Detail](https://via.placeholder.com/200x400) | ![Saved](https://via.placeholder.com/200x400) |
+| ![Home](media/1.png) | ![Detail](media/3.png) | ![Saved](media/2.png) |
 
 
 ---
